@@ -1,0 +1,69 @@
+########## Consumer Code for ECLIPSE IDE #############
+
+import org.apache.kafka.clients.consumer.*;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
+
+import javax.swing.*;
+import java.time.Duration;
+import java.util.*;
+
+public class Consumer {
+    private static final String TOPIC = "hashtags_topic";
+    private static Map<String, Integer> hashtagCounts = new HashMap<>();
+    private static DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+    public static void main(String[] args) {
+        // Set up Kafka consumer
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("group.id", "chart-consumer-group");
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+        consumer.subscribe(Collections.singletonList(TOPIC));
+
+        // Create chart UI
+        SwingUtilities.invokeLater(() -> createChartWindow());
+
+        System.out.println("📈 Chart consumer started...");
+
+        while (true) {
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+            for (ConsumerRecord<String, String> record : records) {
+                String hashtag = record.value();
+                hashtagCounts.put(hashtag, hashtagCounts.getOrDefault(hashtag, 0) + 1);
+            }
+            updateChart();
+        }
+    }
+
+    private static void createChartWindow() {
+        JFrame frame = new JFrame("📊 Live Hashtag Frequency");
+        JFreeChart barChart = ChartFactory.createBarChart(
+                "Top Hashtags",
+                "Hashtag",
+                "Count",
+                dataset
+        );
+
+        ChartPanel chartPanel = new ChartPanel(barChart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(800, 600));
+        frame.setContentPane(chartPanel);
+        frame.pack();
+        frame.setVisible(true);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    }
+
+    private static void updateChart() {
+        dataset.clear();
+        // Sort and show top 10 hashtags
+        hashtagCounts.entrySet().stream()
+                .sorted((a, b) -> b.getValue() - a.getValue())
+                .limit(10)
+                .forEach(e -> dataset.addValue(e.getValue(), "Hashtags", e.getKey()));
+    }
+}
