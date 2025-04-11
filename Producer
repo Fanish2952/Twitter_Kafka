@@ -1,0 +1,56 @@
+########## PRODUCER CODE FOR ECLIPSE IDE  ############
+
+import org.apache.kafka.clients.producer.*;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class Producer {
+    private static final String TOPIC = "hashtags_topic";
+
+    public static void main(String[] args) {
+        String csvFile = "C:/Users/DELL/Downloads/sample.csv"; // Adjust path if needed
+
+        // Kafka Producer configuration
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+
+        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+            String line;
+            br.readLine(); // Skip header
+
+            while ((line = br.readLine()) != null) {
+                // CSV is comma-separated. Handle commas inside quotes if needed.
+                String[] values = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                if (values.length < 4) continue; // Skip malformed lines
+
+                String tweetContent = values[3];
+
+                // Extract hashtags using regex
+                Pattern pattern = Pattern.compile("#\\w+");
+                Matcher matcher = pattern.matcher(tweetContent);
+
+                while (matcher.find()) {
+                    String hashtag = matcher.group();
+                    ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, hashtag);
+                    producer.send(record);
+                    System.out.println("Sent hashtag: " + hashtag);
+                }
+
+                Thread.sleep(100); // Simulate real-time streaming
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            producer.close();
+        }
+    }
+}
