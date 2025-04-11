@@ -1,0 +1,15 @@
+Open the PowerShell terminal in administrator mode. 
+
+Run zookeeper in Termianl 
+.\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
+
+
+Again open the  second PowerShell terminal in administrator mode and run server. 
+.\bin\windows\kafka-server-start.bat .\config\server.properties
+
+
+Again open the PowerShell terminal in administrator mode and create the topic 
+.\bin\windows\kafka-topics.bat --bootstrap-server 127.0.0.1:9092 --create --replication-factor 1 --partitions 1 --topic hashtags_topic 
+
+
+Then press enter 
